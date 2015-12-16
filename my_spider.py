@@ -6,7 +6,7 @@ import urllib2
 from bs4 import BeautifulSoup
 from networkx import nx
 
-maxPagesToVisit = 15000
+maxPagesToVisit = 100000
 
 url = "http://in.bgu.ac.il"
 urls = [url]  # stack of urls to scrape
@@ -37,7 +37,9 @@ def bgu_spider(max_pages):
 
         url = urls.pop(0) #TODO pop is the first one???
         page += 1
-#         print 'Pages visited',              '-----====',  page,'=====-----'
+        if page % 500 == 0:
+            print 'Pages visited',              '-----====',  page,'=====-----'
+            print 'Time used', str(float(time.time()-startTime)/3600), ' Hours'
         #print 'Pages in urls', len(urls)
 
         for link in soup.find_all('a', href=True):
@@ -53,9 +55,11 @@ def bgu_spider(max_pages):
 
 startTime = time.time()
 bgu_spider(maxPagesToVisit)
-totalTime=time.time()
-print 'URLs visited: ' + len(visited)
+totalTime = time.time() - startTime
+print 'Nodes in graph', siteMapGraph.number_of_nodes()
+print 'Edges in graph', siteMapGraph.number_of_edges()
+print 'URLs visited: ', len(visited)
 if totalTime > 3600:
-    print 'Time to visit ' + len(visited) + ' URLs: ' + str(float(totalTime)/3600) + ' Hours'
+    print 'Time to visit ', len(visited), ' URLs: ', str(float(totalTime)/3600) , ' Hours'
 else:
-    print 'Time to visit' + len(visited) +  'URLs: ', totalTime + ' seconds'
+    print 'Time to visit', len(visited),  'URLs: ', totalTime, ' seconds'
