@@ -9,7 +9,7 @@ from networkx import nx
 from networkx.convert_matrix import to_numpy_matrix
 from numpy.core.multiarray import count_nonzero
 
-maxPagesToVisit = 16000
+maxPagesToVisit = 1
 
 url = "http://in.bgu.ac.il"
 urls = [url]  # stack of urls to scrape
@@ -17,11 +17,9 @@ visited = set()
 siteMapGraph = nx.DiGraph()
 
 
-
 def bgu_spider(max_pages):
     page = 0
-    temp_time = 0
-    while (page < max_pages) and (len(urls) > 0):
+    while page < max_pages and len(urls) > 0:
         try:
             #print 'URL visited: ', urls[0]
             #r = requests.get(urls[0])
@@ -42,11 +40,7 @@ def bgu_spider(max_pages):
 
         url = urls.pop(0)
         page += 1
-        if page % 100 == 0:
-            print 'Pages visited',              '-----====',  page, '=====-----'
-            print 'Time used', str(float(time.time()-startTime)/3600), ' Hours'
-            print time.time() - temp_time, 'time from the previous print'
-            temp_time = time.time()
+#         print 'Pages visited',              '-----====',  page,'=====-----'
         #print 'Pages in urls', len(urls)
 
         for link in soup.find_all('a', href=True):
@@ -66,30 +60,47 @@ bgu_spider(maxPagesToVisit)
 totalTime=time.time()-startTime
 
 numOfNodes = siteMapGraph.number_of_nodes()
-a = np.zeros(numOfNodes)                                                        # initialize
+a = np.zeros(numOfNodes)                                                        # Initialize
 
-#*********Build matrix 'H' and vector 'a'*********
+# e = np.empty(numOfNodes)
+# e.fill(1)
+
+#*********Generate matrix 'H' and vector 'a'***
 H = to_numpy_matrix(siteMapGraph)
 for i in range(numOfNodes):
-    nonzero = count_nonzero(H[i])
+    nonzero=count_nonzero(H[i])
     if nonzero > 0:
-        H[i] /= nonzero                                               # initialize each row for equal moving probability
+        H[i] /= nonzero                                                         # initialize each row for equal transition probability
     if not H[i].all(0).any(True):
         a[i] = 1
-#*************************************************
+#**********************************************
 
-pageRankV = np.empty(numOfNodes)
+#**********Generate pageRank vector****
+pageRankV = np.empty(numOfNodes)                                                # transition vector
 pageRankV.fill(float(1)/numOfNodes)
+#**************************************
 
-print 'There are', np.count_nonzero(a), 'non zero values in vector \'a\''
+#*********Generate matrix 'S'********
+S = H.copy()
+for i in range(numOfNodes):
+    if a[i]==1:
+        S[i]=float(1)/numOfNodes
+#************************************
+
+E = S.copy()
+E.fill(1)
+
+G = 0.85*S + 0.15*E                                                             # Generate matrix 'G'
+
+print 'There are',np.count_nonzero(a),'non zero values in vector \'a\''
 
 # print H[11][:,12]
 
 print 'URLs visited:', numOfNodes
 print 'Links visited:' ,siteMapGraph.number_of_edges()
 if totalTime > 3600:
-    print 'Time to visit', str(len(visited)) + ' URLs:' , str(float(totalTime)/3600) + ' Hours'
+    print 'Time to visit' , str(len(visited)) + ' URLs:' , str(float(totalTime)/3600) + ' Hours'
 elif totalTime > 60:
-    print 'Time to visit', str(len(visited)) + ' URLs:' , str(float(totalTime)/60) + ' Minutes'
+    print 'Time to visit' , str(len(visited)) + ' URLs:' , str(float(totalTime)/60) + ' Minutes'
 else:
-    print 'Time to visit', str(len(visited)) +  ' URLs:', str(totalTime) + ' seconds'
+    print 'Time to visit' , str(len(visited)) +  ' URLs:', str(totalTime) + ' seconds'
