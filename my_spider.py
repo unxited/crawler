@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # import unicodedata
+import math
 import time
 import urllib2
 
@@ -16,14 +17,30 @@ urls = [url]  # stack of urls to scrape
 visited = set()
 siteMapGraph = nx.DiGraph()
 
+#This function calculates and return the outcome of multiplying vector in matrix
+def multi_vector_in_matrix(vector,matrix):
+    size=int(vector.size)
+    ansVector = np.empty(size)
+    ansVector.fill(0)
+    for i in range(size):
+        for j in range(size):
+            ansVector[i]+=matrix[j][:,i]*vector[j]
+    return ansVector
 
+#This function calculates and return the norm between 2 vectors
+def norm(vecA,vecB):
+    ans=0
+    for i in range(int(vecA.size)):
+        ans+=pow(vecA[i]-vecB[i],2)
+    return math.sqrt(ans)
+
+
+#This function gathers URLs, links and build graph
 def bgu_spider(max_pages):
     page = 0
-    while page < max_pages and len(urls) > 0:
+    temp_time = 0
+    while len(urls) > 0:
         try:
-            #print 'URL visited: ', urls[0]
-            #r = requests.get(urls[0])
-            #data = r.text
 
             data = urllib2.urlopen(urls[0]).read()
 
@@ -40,7 +57,12 @@ def bgu_spider(max_pages):
 
         url = urls.pop(0)
         page += 1
-#         print 'Pages visited',              '-----====',  page,'=====-----'
+        if page % 10  == 0:
+            print 'Urls in the stack:', len(urls)
+            print 'Pages visited',              '-----====',  page, '=====-----'
+            print 'Time used', str(float(time.time()-startTime)/3600), ' Hours'
+            print time.time() - temp_time, 'seconds from the previous print'
+            temp_time = time.time()
         #print 'Pages in urls', len(urls)
 
         for link in soup.find_all('a', href=True):
@@ -76,7 +98,7 @@ for i in range(numOfNodes):
 #**********************************************
 
 #**********Generate pageRank vector****
-pageRankV = np.empty(numOfNodes)                                                # transition vector
+pageRankV = np.empty(numOfNodes)                                                # initialize transition probabilities vector
 pageRankV.fill(float(1)/numOfNodes)
 #**************************************
 
@@ -88,9 +110,21 @@ for i in range(numOfNodes):
 #************************************
 
 E = S.copy()
-E.fill(1)
+E.fill(float(1)/numOfNodes)
 
 G = 0.85*S + 0.15*E                                                             # Generate matrix 'G'
+
+
+for i in range(5):
+    testSum=0
+    tempV = pageRankV
+    pageRankV = multi_vector_in_matrix(pageRankV, G)
+    print i,float(norm(tempV,pageRankV))
+    for j in range(pageRankV.size):
+        testSum+=pageRankV[j]
+
+
+
 
 print 'There are',np.count_nonzero(a),'non zero values in vector \'a\''
 
@@ -99,8 +133,10 @@ print 'There are',np.count_nonzero(a),'non zero values in vector \'a\''
 print 'URLs visited:', numOfNodes
 print 'Links visited:' ,siteMapGraph.number_of_edges()
 if totalTime > 3600:
-    print 'Time to visit' , str(len(visited)) + ' URLs:' , str(float(totalTime)/3600) + ' Hours'
+    print 'Time to visit', str(len(visited)) + ' URLs:' , str(float(totalTime)/3600) + ' Hours'
 elif totalTime > 60:
-    print 'Time to visit' , str(len(visited)) + ' URLs:' , str(float(totalTime)/60) + ' Minutes'
+    print 'Time to visit', str(len(visited)) + ' URLs:' , str(float(totalTime)/60) + ' Minutes'
 else:
-    print 'Time to visit' , str(len(visited)) +  ' URLs:', str(totalTime) + ' seconds'
+    print 'Time to visit', str(len(visited)) + ' URLs:', str(totalTime) + ' seconds'
+# with open('bgu_url_graph.json', mode='w') as f:
+#      json.dump(simplejson.dumps(H.tolist()), f, indent=2)
