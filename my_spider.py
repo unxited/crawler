@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # import unicodedata
-import datetime
 import json
 import math
 import time
@@ -13,13 +12,12 @@ from networkx.convert_matrix import to_numpy_matrix
 from networkx.readwrite import json_graph
 from numpy.core.multiarray import count_nonzero
 
-maxPagesToVisit = 12000
+maxPagesToVisit = 50
 
 url = "http://in.bgu.ac.il"
 urls = [url]  # stack of urls to scrape
 visited = set()
 siteMapGraph = nx.DiGraph()
-d_time = datetime.datetime.now()
 
 
 # This function calculates and return the outcome of multiplying vector by matrix
@@ -72,12 +70,7 @@ def bgu_spider(max_pages):
 
         url = urls.pop(0)  # TODO pop is the first one???
         page += 1
-        if page % 100 == 0:
-            print 'Pages visited', '-----====', page, '=====-----'
-            print 'Time Passed', (datetime.datetime.now() - d_time)
-        if page > 10000 and page % 10 == 0:
-            print 'Pages visited', '-----====', page, '=====-----'
-            print 'Time Passed', (datetime.datetime.now() - d_time)
+        #         print 'Pages visited',              '-----====',  page,'=====-----'
         # print 'Pages in urls', len(urls)
 
         for link in soup.find_all('a', href=True):
@@ -85,13 +78,19 @@ def bgu_spider(max_pages):
             # temp = unicodedata.normalize('NFKD', link).encode('ascii','ignore')
 
             if "bgu.ac.il" in link and ("http://" or "https://") in link:
+                if link not in visited and link not in urls:
+                    urls.append(link)
+                    if link != url:  # to prevent self-loops
+                        siteMapGraph.add_edge(url, link)
+
                 if link.endswith('pdf') or "jpg" in link:
                     visited.add(link)
-                elif link not in visited and link not in urls:
-                    urls.append(link)
-
-                if link != url:  # to prevent self-loops
-                    siteMapGraph.add_edge(url, link)
+                    # print(link)  # TODO add this link to graph but not parse the wb page
+                    if link != url:  # to prevent self-loops
+                        siteMapGraph.add_edge(url, link)
+    graph_dump = json_graph.adjacency_data(siteMapGraph)  # Create json adjacency data
+    with open('siteMapGraph.txt', 'w') as outfile:  # Save json adjacency data to file
+        json.dump(graph_dump, outfile)
 
 
 # testM=np.matrix('1 2 3; 4 5 6; 7 8 9')
@@ -101,9 +100,6 @@ def bgu_spider(max_pages):
 # vecB=np.array([4,5,6])
 # vevA=norm(vecA, vecB)
 
-graph_dump = json_graph.adjacency_data(siteMapGraph)                            # Create json adjacency data
-with open('siteMapGraph.txt', 'w') as outfile:                                  # Save json adjacency data to file
-    json.dump(graph_dump, outfile)
 startTime = time.time()
 bgu_spider(maxPagesToVisit)
 totalTime = time.time() - startTime
